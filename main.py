@@ -1,6 +1,6 @@
 import cv2
 import mediapipe as mp
-import hand_process
+import hand_process as hp
 
 # Initalize hand landmark detection model.
 mp_drawing = mp.solutions.drawing_utils
