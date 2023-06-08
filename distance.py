@@ -13,7 +13,8 @@ def location_process(data):
 # z축 연산 함수
 def z_scale_transfer(z_scale):
 
-    z_scale = z_scale - 20
+    z_const = 20
+    z_scale = z_scale - z_const
     if z_scale < 0:
         z_scale = z_scale**2
         z_scale = -1 * z_scale
