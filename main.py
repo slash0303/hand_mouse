@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import mediapipe as mp
-import hand_process as hp
 from eaxtension import LogE
 from eaxtension import jsonE
 import keyboard
@@ -32,7 +31,7 @@ def save_point(points):
 
 
 # 변환 행렬 계산
-def persp_calc(frame, points:dict):
+def persp_calc(frame, points:dict, middle_finger_tip):
     type(frame)
     width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
     height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
@@ -53,8 +52,26 @@ def persp_calc(frame, points:dict):
                                    [width, 0],
                                    [width, height],
                                    [0, height]])
-        modified_frame = cv2.getPerspectiveTransform(origin_corner, frame_corner)
-        return cv2.warpPerspective(frame, modified_frame, (int(width), int(height)))
+        mod_matrix = cv2.getPerspectiveTransform(origin_corner, frame_corner)
+        LogE.d("persp matrix", mod_matrix)
+
+        try:
+            # perspective 변환된 좌표계에서 손가락 위치 구하기
+            persp_x = middle_finger_tip.x
+            persp_y = middle_finger_tip.y
+        except:
+            persp_x = 0
+            persp_y = 0
+
+        finally:
+            persp_point = np.float32([persp_x, persp_y, 1])
+
+        persp_point = persp_point * mod_matrix
+        LogE.d("persp x", persp_x)
+        LogE.d("persp y", persp_y)
+        LogE.d("persp_point", persp_point)
+
+        return cv2.warpPerspective(frame, mod_matrix, (int(width), int(height)))
 
 # json 불러오기
 def load_point():
@@ -68,6 +85,8 @@ def load_point():
 # perspective 변환 이용을 위한 손가락 위치
 middle_finger_tip = None
 point_of_screen = {}
+
+persp_start = False
 
 # hand landmark 모듈 init
 mp_drawing = mp.solutions.drawing_utils
@@ -115,6 +134,9 @@ with mp_hands.Hands(
         if cv2.waitKey(5) & 0xFF == 27:
             break
 
+        if persp_start:
+            persp_image = persp_calc(image, point_of_screen, middle_finger_tip)
+
         # 좌표계 설정 함수
         point_set(image, "q", 0)
         point_set(image, "p", 1)
@@ -122,10 +144,13 @@ with mp_hands.Hands(
         point_set(image, "z", 3)
         save_point(point_of_screen)
 
+        if cv2.waitKey(4) == ord('t'):
+            LogE.d("t", "pressed")
+            persp_start = True
+
         if cv2.waitKey(4) == ord('r'):
             LogE.d("r", "pressed")
-            image = persp_calc(image, point_of_screen)
-            cv2.imshow('perspectived', image)
+            cv2.imshow('perspectived', persp_image)
 
         if cv2.waitKey(4) == ord('l'):
             point_of_screen = load_point()
