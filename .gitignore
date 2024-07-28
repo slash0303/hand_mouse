@@ -1,3 +1,5 @@
 .idea/
 lib/
 Scripts/
+venv_hand_mouse
+points.json
