@@ -191,7 +191,7 @@ if __name__ == "__main__":
             point_set(image, "z", 3)
 
             # 시선 영역 저장
-            if cv2.waitKey(2) == ord(key):
+            if cv2.waitKey(2) == ord('s'):
                 save_point(point_of_screen)
 
             # 행렬 변환 실행
