@@ -24,12 +24,11 @@ def point_set(frame, key:str, dict_index):
 
 # 세팅된 좌표 저장
 def save_point(points):
-    if cv2.waitKey(2) == ord('s'):
-        save_data = {0:{}, 1:{}, 2:{}, 3:{}}
-        for i in range(0, 4):
-            save_data[i]["x"] = points[i].x
-            save_data[i]["y"] = points[i].y
-        jsonE.dumps("points.json", save_data)
+    save_data = {0:{}, 1:{}, 2:{}, 3:{}}
+    for i in range(0, 4):
+        save_data[i]["x"] = points[i].x
+        save_data[i]["y"] = points[i].y
+    jsonE.dumps("points.json", save_data)
 
 # 변환 행렬 계산
 def persp_calc(frame, points:dict, middle_finger_tip):
@@ -85,9 +84,7 @@ def mouse_control():
         middle_finger_x = middle_finger_tip.x
         middle_finger_y = middle_finger_tip.y
     except:
-        # 카메라에 손이 잡히지 않는 경우
-        middle_finger_x = 0
-        middle_finger_y = 0
+        pass
 
     finally:
         # 계산가능하도록 행렬로 변환
@@ -135,6 +132,9 @@ if __name__ == "__main__":
     mp_drawing_styles = mp.solutions.drawing_styles
     mp_hands = mp.solutions.hands
 
+    # face landmark 모듈 init
+    mp_face = mp.solutions.face_mesh
+
     # VideoCapture 객체 생성 - 0번 카메라
     cap = cv2.VideoCapture(0)
 
@@ -147,7 +147,10 @@ if __name__ == "__main__":
         model_complexity=0,
         min_detection_confidence=0.5,
         min_tracking_confidence=0.5,
-        max_num_hands = 2) as hands:
+        max_num_hands = 2) as hands, mp_face.FaceMesh(
+        min_detection_confidence=0.5,
+        min_tracking_confidence=0.5,
+        max_num_faces=1) as face:
 
         while cap.isOpened():
             success, image = cap.read()
@@ -160,13 +163,21 @@ if __name__ == "__main__":
             # pass by reference.
             image.flags.writeable = False
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            results = hands.process(image)
+            hand_results = hands.process(image)
+            face_results = face.process(image)
 
             # Draw the hand annotations on the image.
             image.flags.writeable = True
             image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-            if results.multi_hand_landmarks:
-                for hand_landmarks in results.multi_hand_landmarks:
+            if hand_results.multi_hand_landmarks and face_results.multi_face_landmarks:
+
+                hand_results_length = len(hand_results.multi_hand_landmarks)
+                face_results_length = len(face_results.multi_face_landmarks)
+
+                if hand_results_length > face_results_length:
+                    face_results.multi_face_landmarks = face_results.multi_face_landmarks + face_results.multi_face_landmarks
+
+                for hand_landmarks, face_landmarks in zip(hand_results.multi_hand_landmarks, face_results.multi_face_landmarks):
                     mp_drawing.draw_landmarks(
                         image,
                         hand_landmarks,
@@ -174,6 +185,12 @@ if __name__ == "__main__":
                         mp_drawing_styles.get_default_hand_landmarks_style(),
                         mp_drawing_styles.get_default_hand_connections_style())
                     middle_finger_tip = hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP]
+
+                    mp_drawing.draw_landmarks(
+                        image,
+                        face_landmarks,
+                        mp_face.FACEMESH_TESSELATION,
+                        mp_drawing_styles.get_default_face_mesh_tesselation_style())
 
             # Flip the image horizontally for a selfie-view display.
             cv2.imshow('Hand mouse', cv2.flip(image, 1))
@@ -185,10 +202,14 @@ if __name__ == "__main__":
                 mouse_control()
 
             # 시선 영역 설정
-            point_set(image, "q", 0)
-            point_set(image, "p", 1)
-            point_set(image, "m", 2)
-            point_set(image, "z", 3)
+            if cv2.waitKey(2) == ord('q'):
+                point_set(image, "q", 0)
+            if cv2.waitKey(2) == ord('p'):
+                point_set(image, "p", 1)
+            if cv2.waitKey(2) == ord('m'):
+                point_set(image, "m", 2)
+            if cv2.waitKey(2) == ord('z'):
+                point_set(image, "z", 3)
 
             # 시선 영역 저장
             if cv2.waitKey(2) == ord('s'):
