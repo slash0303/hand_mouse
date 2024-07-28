@@ -17,11 +17,10 @@ def text_in(frame, text="default", location=(0,0), color=(0, 0, 0)):
 
 # 검지손가락 좌표 세팅
 def point_set(frame, key:str, dict_index):
-    if cv2.waitKey(2) == ord(key):
-        LogE.d(key, "pressed")
-        text_in(frame, "perspective settings")
-        point_of_screen[dict_index] = middle_finger_tip
-        LogE.d("pos", point_of_screen)
+    LogE.d(key, "pressed")
+    text_in(frame, "perspective settings")
+    point_of_screen[dict_index] = middle_finger_tip
+    LogE.d("pos", point_of_screen)
 
 # 세팅된 좌표 저장
 def save_point(points):
@@ -192,7 +191,8 @@ if __name__ == "__main__":
             point_set(image, "z", 3)
 
             # 시선 영역 저장
-            save_point(point_of_screen)
+            if cv2.waitKey(2) == ord(key):
+                save_point(point_of_screen)
 
             # 행렬 변환 실행
             if cv2.waitKey(4) == ord('t'):
